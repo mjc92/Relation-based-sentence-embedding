@@ -16,15 +16,15 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1):
         super(MultiHeadAttention, self).__init__()
 
-        self.n_head = n_head
-        self.d_k = d_k
-        self.d_v = d_v
+        self.n_head = n_head # number of different attention heads
+        self.d_k = d_k # dimension of key
+        self.d_v = d_v # dimension of value
 
         self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k))
         self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k))
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v))
 
-        self.attention = ScaledDotProductAttention(d_model)
+        self.attention = ScaledDotProductAttention(d_model) # d_model=512
         self.layer_norm = LayerNormalization(d_model)
         self.proj = Linear(n_head*d_v, d_model)
 
@@ -64,6 +64,7 @@ class MultiHeadAttention(nn.Module):
         # project back to residual size
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
+        # outputs: [mb_size x len_v x d_model]
 
         return self.layer_norm(outputs + residual), attns
 

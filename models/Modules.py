@@ -80,20 +80,20 @@ class ScaledDotProductAttention(nn.Module):
         self.softmax = BottleSoftmax()
 
     def forward(self, q, k, v, attn_mask=None):
-
+        """...compute the dot products of the query with all keys, divide each by dk^(1/2),"""
         attn = torch.bmm(q, k.transpose(1, 2)) / self.temper
 
         if attn_mask is not None:
-
+            # if there is an attention mask, put all masked values to minus inf for softmax
             assert attn_mask.size() == attn.size(), \
                     'Attention mask shape {} mismatch ' \
                     'with Attention logit tensor shape ' \
                     '{}.'.format(attn_mask.size(), attn.size())
 
             attn.data.masked_fill_(attn_mask, -float('inf'))
-
+        """... and apply a softmax function"""
         attn = self.softmax(attn)
         attn = self.dropout(attn)
         output = torch.bmm(attn, v)
 
-        return output, attn
+        return output, attn # return both attention-applied value and attention

@@ -9,6 +9,7 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
         super(EncoderLayer, self).__init__()
+        # initialize multi head attention
         self.slf_attn = MultiHeadAttention(
             n_head, d_model, d_k, d_v, dropout=dropout)
         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
@@ -17,4 +18,4 @@ class EncoderLayer(nn.Module):
         enc_output, enc_slf_attn = self.slf_attn(
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask)
         enc_output = self.pos_ffn(enc_output)
-        return enc_output, enc_slf_attn
+        return enc_output, enc_slf_attn # [mb x len_v x d_model], [mb*head x len_q x len_k]

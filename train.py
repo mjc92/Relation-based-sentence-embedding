@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 import dataset
 from optimizer import ScheduledOptimizer
+from models.Functions import BatchToData 
 
 
 def get_performance(crit, pred, gold, smoothing=False, num_class=None):
@@ -39,22 +40,28 @@ def train_epoch(model, training_data, crit, optimizer):
     model.train()
 
     total_loss = 0
-    n_total_words = 0
-    n_total_correct = 0
 
     for batch in tqdm(
             training_data, mininterval=2,
             desc='  - (Training)   ', leave=False):
         # prepare data
-        src, tgt = batch
-        gold = tgt[0][:, 1:]
-
+        
+        inputs, positions, labels = BatchToData(batch)
+        # we assume that both the simple and normal datasets are padded (with ones...)
+        
+        if next(model.parameters()).is_cuda:
+            src = (inputs.cuda(), positions.cuda())
+            labels = labels.cuda()
+        else:
+            src = (inputs, positions)
+        
         # forward
         optimizer.zero_grad()
-        pred = model(src, tgt)
+        pred = model(src)
 
         # backward
-        loss, n_correct = get_performance(crit, pred, gold)
+        loss = crit(pred, labels)
+        # loss, n_correct = get_performance(crit, pred, gold)
         loss.backward()
 
         # update parameters
@@ -62,12 +69,15 @@ def train_epoch(model, training_data, crit, optimizer):
         optimizer.update_learning_rate()
 
         # note keeping
-        n_words = gold.data.ne(dataset.PADDING_TOKEN).sum()
-        n_total_words += n_words
-        n_total_correct += n_correct
+        n_total = len(labels)
+        n_correct = (pred.max(1)[1].data==targets).long().sum().data[0]
+        print(n_correct)
+        # n_words = gold.data.ne(dataset.PADDING_TOKEN).sum()
+        # n_total_words += n_words
+        # n_total_correct += n_correct
         total_loss += loss.data[0]
 
-    return total_loss / n_total_words, n_total_correct / n_total_words
+    return total_loss / n_total, n_correct / n_total
 
 
 def eval_epoch(model, validation_data, crit):
@@ -157,12 +167,12 @@ def train(model, training_data, validation_data, crit, optimizer, log='model'):
 def main():
     from torchtext.data.iterator import Iterator
     import torchtext
-    from models import RelationsNetwork
-
+    from models.Models import AttentiveRelationsNetwork
+    
+    word_dim = 512
     cuda = True
-    batch_size = 32
-    max_sentence_len = 100
-    word_dim = 300
+    batch_size = 64
+    max_sentence_len = 240
     n_warmup_steps = 4000
 
     # ========= Loading Dataset =========#
@@ -175,7 +185,9 @@ def main():
     vocab_size = len(vocab)
 
     # TODO: Incorporate vocab. size as target class length.
-    model = RelationsNetwork(batch_size, max_sentence_len, word_dim, cuda)
+    
+    model = AttentiveRelationsNetwork(n_src_vocab=vocab_size, n_max_seq=max_sentence_len, 
+                                         out_classes=2, batch_size=batch_size)
 
     optimizer = ScheduledOptimizer(
         optim.Adam(
@@ -186,14 +198,14 @@ def main():
     def get_criterion(vocab_size):
         """ With PAD token zero weight """
         weight = torch.ones(vocab_size)
-        weight[dataset.PADDING_TOKEN] = 0
+        weight[1] = 0
         return nn.CrossEntropyLoss(weight, size_average=False)
 
-    crit = get_criterion(vocab_size)
-
+    # crit = get_criterion(vocab_size)
+    crit = nn.CrossEntropyLoss()
     if cuda:
         model = model.cuda()
-        crit = crit.cuda()
+        # crit = crit.cuda()
 
     train(model, training_data, validation_data, crit, optimizer)
 
