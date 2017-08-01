@@ -6,15 +6,30 @@ from torch.autograd import Variable
 from torch.nn import init
 
 if __name__ == "__main__":
-    from models import RelationsNetwork, AttentiveRelationsNetwork, MultiHeadAttention
+    from models.Models import AttentiveRelationsNetwork
 
-    batch_size, max_sentence_len, embed_dim = 2, 25, 300
-    model = RelationsNetwork(batch_size=batch_size, max_sentence_len=max_sentence_len, embed_dim=embed_dim,
-                                      cuda=False)
-
-    sentences = Variable(torch.randn(batch_size, max_sentence_len, embed_dim))
-    condition = Variable(torch.randn(batch_size, embed_dim))
-
-    model(sentences, condition)
-
-    test_attention = MultiHeadAttention(n_head=8, d_model=embed_dim, d_k=64, d_v=64)
+    batch_size, max_sentence_len, embed_dim, vocab = 2, 25, 300, 100
+    model = AttentiveRelationsNetwork(vocab,vocab,max_sentence_len,batch_size)
+    
+#     # inputs for Attentional Relations network
+    batch_size, seq_length, vocab = 2, 25, 100
+    inputs=np.random.randint(3,vocab, batch_size*seq_length,
+                  dtype=int).reshape([-1,seq_length])
+    
+    len_list = []
+    for i,line in enumerate(inputs):
+        inputs[i,0]=1
+        length = np.random.randint(10,max_sentence_len)
+        len_list.append(length)
+        inputs[i,length]=2
+        inputs[i,length+1:]=0
+    positions = np.zeros(inputs.shape,dtype=int)
+    for i in range(positions.shape[0]):
+        length = len_list[i]
+        positions[i,:length] = np.arange(length)+1
+    
+    inputs = Variable(torch.LongTensor(inputs))
+    positions = Variable(torch.LongTensor(positions))
+    outputs = model((inputs,positions))
+    print(outputs)
+    
