@@ -97,8 +97,9 @@ class AttentiveRelationsNetwork(nn.Module):
         self.relations = RelationsNetwork(
             batch_size, n_max_seq, d_model, out_classes)
   
-        self.dropout = nn.Dropout(dropout)  
-
+        self.dropout = nn.Dropout(dropout)
+    
+    
     def get_trainable_parameters(self):
         ''' Avoid updating the position encoding '''
         enc_freezed_param_ids = set(map(id, self.encoder.position_enc.parameters()))
@@ -112,4 +113,5 @@ class AttentiveRelationsNetwork(nn.Module):
         # enc_outputs[-1]: [mb x seq_len x d_model]
         # we could either try averaging all attentions or using the last one
         outputs = self.relations(enc_outputs[-1])
+        # outputs = enc_outputs[-1].view(enc_outputs[-1].size(0),-1)[:,:2]
         return outputs

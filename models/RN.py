@@ -10,19 +10,19 @@ class RelationsNetwork(nn.Module):
         # (max sentence length + x, y coordinates) * 2 + question vector
         self.g = nn.Sequential(
             nn.Linear((d_model + 2) * 3, 256),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.ReLU(inplace=True)
+            nn.ReLU(),
         )
 
         self.f = nn.Sequential(
             nn.Linear(256, 256),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.ReLU(inplace=True),
-            nn.Dropout(inplace=True),
+            nn.ReLU(),
+            nn.Dropout(),
             nn.Linear(256, out_classes)
         )
 
@@ -42,16 +42,15 @@ class RelationsNetwork(nn.Module):
         batch_size, seq_length, d_model = sentences.size()
 
         # Append coordinates.
-        # print('sentences: ',sentences)
-        # print('self coordinate map: ',self.coordinate_map[:batch_size,:seq_length,:])
-        sentences = torch.cat([sentences,self.coordinate_map[:batch_size,:seq_length,:]], dim=2)
+        sentences = torch.cat([sentences,self.coordinate_map[:batch_size,:seq_length,:]], 
+                                          dim=2)
 
         # Build relations map by permutating words `i` and `j`.
 
-        object_i = torch.unsqueeze(sentences, dim=1) # [batch x 1 x seq x d_model+2]
+        object_i = torch.unsqueeze(sentences.clone(), dim=1) # [batch x 1 x seq x d_model+2]
         object_i = object_i.repeat(1, seq_length, 1, 1) # [batch x seq x seq x d_model+2]
 
-        object_j = torch.unsqueeze(sentences, dim=2) # [batch x seq x 1 x d_model+2]
+        object_j = torch.unsqueeze(sentences.clone(), dim=2) # [batch x seq x 1 x d_model+2]
         object_j = object_j.repeat(1, 1, seq_length, 1) # [batch x seq x seq x d_model+2]
 
         # Prepare condition (question vector).

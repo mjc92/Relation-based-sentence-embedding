@@ -26,7 +26,7 @@ def BatchToData(batch):
         positions[i,:lengths[i]] = torch.arange(0,lengths[i]).long()+1
         
     # do random permutation
-    perm = torch.randperm(simple.size(0))
+    perm = torch.randperm(inputs.size(0))
     inputs = inputs[perm]
     positions = positions[perm]
     labels = labels[perm]

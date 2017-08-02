@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+import numpy as np
 
 import dataset
 from optimizer import ScheduledOptimizer
@@ -46,32 +47,36 @@ def train_epoch(model, training_data, crit, optimizer):
             desc='  - (Training)   ', leave=False):
         # prepare data
         
-        inputs, positions, labels = BatchToData(batch)
+        inputs, positions, targets = BatchToData(batch)
+        print("Inputs   : ",inputs.size())
+        print("Positions: ",positions.size())
+        print("Targets  : ",targets.size())
         # we assume that both the simple and normal datasets are padded (with ones...)
         
         if next(model.parameters()).is_cuda:
             src = (inputs.cuda(), positions.cuda())
-            labels = labels.cuda()
+            targets = targets.cuda()
         else:
             src = (inputs, positions)
         
         # forward
         optimizer.zero_grad()
         pred = model(src)
-
         # backward
-        loss = crit(pred, labels)
+        start = time.time()
+        loss = crit(pred, targets)
         # loss, n_correct = get_performance(crit, pred, gold)
         loss.backward()
 
         # update parameters
         optimizer.step()
         optimizer.update_learning_rate()
-
+        # a = targets.data.cpu().numpy()
+        # b = pred.max(1)[1].data.cpu().numpy()
+        # print(np.vstack([a,b]))
         # note keeping
-        n_total = len(labels)
-        n_correct = (pred.max(1)[1].data==targets).long().sum().data[0]
-        print(n_correct)
+        n_total = len(targets)
+        n_correct = (pred.max(1)[1].data==targets.data).long().sum()
         # n_words = gold.data.ne(dataset.PADDING_TOKEN).sum()
         # n_total_words += n_words
         # n_total_correct += n_correct
@@ -179,8 +184,8 @@ def main():
     training_set, testing_set, vocab = dataset.simple_wikipedia()
 
     sort_key = lambda batch: torchtext.data.interleave_keys(len(batch.normal), len(batch.simple))
-    training_data = Iterator(training_set, batch_size, shuffle=True, device=-1, repeat=False, sort_key=sort_key)
-    validation_data = Iterator(testing_set, batch_size, device=-1, train=False, sort_key=sort_key)
+    training_data = Iterator(training_set, batch_size/2, shuffle=True, device=-1, repeat=False, sort_key=sort_key)
+    validation_data = Iterator(testing_set, batch_size/2, device=-1, train=False, sort_key=sort_key)
 
     vocab_size = len(vocab)
 
