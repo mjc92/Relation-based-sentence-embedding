@@ -6,6 +6,7 @@ import models.Constants as Constants
 from models.Modules import BottleLinear as Linear
 from models.Layers import EncoderLayer
 from models.RN import RelationsNetwork
+import time
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -63,19 +64,21 @@ class Encoder(nn.Module):
         # Word embedding look up
         enc_input = self.src_word_emb(src_seq)
         # enc_input: [b x max_len_seq x d_word_vec]
-
+        
         # Position Encoding addition
         enc_input += self.position_enc(src_pos) # [b x max_len_seq x d_word_vec]
         enc_outputs, enc_slf_attns = [], []
 
         enc_output = enc_input
+        
         enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq) # [b x max_len x max_len]
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
                 enc_output, slf_attn_mask=enc_slf_attn_mask)
             enc_outputs += [enc_output]
             enc_slf_attns += [enc_slf_attn]
-
+        
+ 
         # returns a list of encoder outputs and encoder self attentions
         return enc_outputs, enc_slf_attns
     
@@ -95,7 +98,7 @@ class AttentiveRelationsNetwork(nn.Module):
             d_inner_hid=d_inner_hid, dropout=dropout)
         
         self.relations = RelationsNetwork(
-            batch_size, n_max_seq, d_model, out_classes)
+            batch_size, n_max_seq, d_model, out_classes, d_hidden=128)
   
         self.dropout = nn.Dropout(dropout)
     
@@ -108,10 +111,9 @@ class AttentiveRelationsNetwork(nn.Module):
 
     def forward(self, src):
         src_seq, src_pos = src
-
         enc_outputs, enc_slf_attns = self.encoder(src_seq, src_pos)
         # enc_outputs[-1]: [mb x seq_len x d_model]
         # we could either try averaging all attentions or using the last one
-        outputs = self.relations(enc_outputs[-1])
-        # outputs = enc_outputs[-1].view(enc_outputs[-1].size(0),-1)[:,:2]
+        # outputs = self.relations(enc_outputs[-1])
+        outputs = enc_outputs[-1].view(enc_outputs[-1].size(0),-1)[:,:2]
         return outputs

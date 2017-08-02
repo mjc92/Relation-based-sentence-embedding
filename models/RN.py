@@ -4,29 +4,32 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 class RelationsNetwork(nn.Module):
-    def __init__(self, batch_size, n_max_seq, d_model, out_classes):
+    def __init__(self, batch_size, n_max_seq, d_model, out_classes, d_hidden=256):
         super(RelationsNetwork, self).__init__()
+        
+        self.hidden = d_hidden
 
         # (max sentence length + x, y coordinates) * 2 + question vector
         self.g = nn.Sequential(
-            nn.Linear((d_model + 2) * 3, 256),
+            nn.Linear((d_model + 2) * 3, d_hidden),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(d_hidden, d_hidden),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(d_hidden, d_hidden),
             nn.ReLU(),
         )
 
         self.f = nn.Sequential(
-            nn.Linear(256, 256),
+            nn.Linear(d_hidden, d_hidden),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(d_hidden, d_hidden),
             nn.ReLU(),
             nn.Dropout(),
-            nn.Linear(256, out_classes)
+            nn.Linear(d_hidden, out_classes)
         )
 
         # Prepare coordinates.
+        n_max_seq += 1
         self.coordinate_map = torch.zeros(batch_size, n_max_seq, 2)
 
         for i in range(n_max_seq):
@@ -66,7 +69,7 @@ class RelationsNetwork(nn.Module):
 
         # Reshape yet again and sum.
 
-        relations_map = relations_map.view(batch_size, seq_length * seq_length, 256)
+        relations_map = relations_map.view(batch_size, seq_length * seq_length, self.hidden)
         relations_map = relations_map.sum(1).squeeze() # [batch x 256]
 
         # Reshape for passing it through f(x).

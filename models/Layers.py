@@ -1,6 +1,7 @@
 ''' Define the Layers '''
 import torch.nn as nn
 from models.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+import time
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -15,7 +16,9 @@ class EncoderLayer(nn.Module):
         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
 
     def forward(self, enc_input, slf_attn_mask=None):
+        start = time.time()
         enc_output, enc_slf_attn = self.slf_attn(
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask)
-        enc_output = self.pos_ffn(enc_output)
+        # remove positional feedforward network as it consumes too much time
+        # enc_output = self.pos_ffn(enc_output)
         return enc_output, enc_slf_attn # [mb x len_v x d_model], [mb*head x len_q x len_k]

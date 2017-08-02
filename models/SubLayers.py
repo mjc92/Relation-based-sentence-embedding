@@ -7,6 +7,7 @@ from models.Modules import BottleLinear as Linear
 from models.Modules import ScaledDotProductAttention
 #from transformer.Modules import BottleLayerNormalization as LayerNormalization
 from models.Modules import LayerNormalization
+import time
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -36,15 +37,17 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, q, k, v, attn_mask=None):
 
+        start = time.time()
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
 
         residual = q
-
+        
+        start = time.time()
         mb_size, len_q, d_model = q.size()
         mb_size, len_k, d_model = k.size()
         mb_size, len_v, d_model = v.size()
-
+        
         # treat as a (n_head) size batch
         q_s = q.repeat(n_head, 1, 1).view(n_head, -1, d_model) # n_head x (mb_size*len_q) x d_model
         k_s = k.repeat(n_head, 1, 1).view(n_head, -1, d_model) # n_head x (mb_size*len_k) x d_model
@@ -65,8 +68,10 @@ class MultiHeadAttention(nn.Module):
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
         # outputs: [mb_size x len_v x d_model]
-
-        return self.layer_norm(outputs + residual), attns
+        
+        layer_outputs = self.layer_norm(outputs + residual)
+        
+        return layer_outputs, attns
 
 class PositionwiseFeedForward(nn.Module):
     ''' A two-feed-forward-layer module '''
