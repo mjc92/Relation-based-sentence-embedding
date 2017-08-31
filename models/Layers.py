@@ -20,5 +20,5 @@ class EncoderLayer(nn.Module):
         enc_output, enc_slf_attn = self.slf_attn(
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask)
         # remove positional feedforward network as it consumes too much time
-        # enc_output = self.pos_ffn(enc_output)
+        enc_output = self.pos_ffn(enc_output)
         return enc_output, enc_slf_attn # [mb x len_v x d_model], [mb*head x len_q x len_k]

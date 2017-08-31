@@ -102,6 +102,7 @@ class AttentiveRelationsNetwork(nn.Module):
   
         self.dropout = nn.Dropout(dropout)
     
+        self.linear = nn.Linear(d_model,out_classes)
     
     def get_trainable_parameters(self):
         ''' Avoid updating the position encoding '''
@@ -112,8 +113,6 @@ class AttentiveRelationsNetwork(nn.Module):
     def forward(self, src):
         src_seq, src_pos = src
         enc_outputs, enc_slf_attns = self.encoder(src_seq, src_pos)
-        # enc_outputs[-1]: [mb x seq_len x d_model]
-        # we could either try averaging all attentions or using the last one
-        # outputs = self.relations(enc_outputs[-1])
-        outputs = enc_outputs[-1].view(enc_outputs[-1].size(0),-1)[:,:2]
+
+        outputs = self.linear(enc_outputs[-1].max(1)[0])
         return outputs
